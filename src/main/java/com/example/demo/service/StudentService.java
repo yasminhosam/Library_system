@@ -5,6 +5,8 @@ import com.example.demo.repository.StudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class StudentService {
 
@@ -12,28 +14,44 @@ public class StudentService {
     private StudentRepository studentRepository;
 
     // INSERT
-    public void addStudent(Student s) {
-        studentRepository.save(s);
+    public Student addStudent(Student student) {
+        return studentRepository.save(student);
     }
 
     // READ
-    public void getAllStudents() {
-        studentRepository.findAll().forEach(s ->
-                System.out.println(s.getFirstname() + " " + s.getLastname())
-        );
+    public List<Student> getAllStudents() {
+        return studentRepository.findAll();
+    }
+
+    // READ BY ID
+    public Student getStudentById(int id) {
+        return studentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
     }
 
     // UPDATE
-    public void updateStudent(int id) {
-        Student s = studentRepository.findById(id).orElse(null);
-        if (s != null) {
-            s.setFirstname("Updated");
-            studentRepository.save(s);
-        }
+    public Student updateStudent(int id, Student studentDetails) {
+
+        Student existingStudent = studentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Student not found to update"));
+
+
+        existingStudent.setFirstname(studentDetails.getFirstname());
+        existingStudent.setLastname(studentDetails.getLastname());
+        existingStudent.setEmail(studentDetails.getEmail());
+        existingStudent.setMaxBorrowLimit(studentDetails.getMaxBorrowLimit());
+
+
+
+        return studentRepository.save(existingStudent);
     }
 
     // DELETE
-    public void deleteStudent(int id) {
+    public String deleteStudent(int id) {
+        if (!studentRepository.existsById(id)) {
+            return "Student not found";
+        }
         studentRepository.deleteById(id);
+        return "Deleted Successfully.";
     }
 }
