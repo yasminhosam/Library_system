@@ -3,6 +3,7 @@ package com.example.demo.service;
 import com.example.demo.entity.Student;
 import com.example.demo.repository.StudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,23 +14,20 @@ public class StudentService {
     @Autowired
     private StudentRepository studentRepository;
 
-    // INSERT
-    public Student addStudent(Student student) {
+    public Student addStudent(Student student)
+    {
         return studentRepository.save(student);
     }
 
-    // READ
     public List<Student> getAllStudents() {
-        return studentRepository.findAll();
+        return studentRepository.findAll(Sort.by(Sort.Direction.ASC, "firstname"));
     }
 
-    // READ BY ID
     public Student getStudentById(int id) {
         return studentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Student not found"));
     }
 
-    // UPDATE
     public Student updateStudent(int id, Student studentDetails) {
 
         Student existingStudent = studentRepository.findById(id)
@@ -46,7 +44,6 @@ public class StudentService {
         return studentRepository.save(existingStudent);
     }
 
-    // DELETE
     public String deleteStudent(int id) {
         if (!studentRepository.existsById(id)) {
             return "Student not found";
@@ -55,7 +52,8 @@ public class StudentService {
         return "Deleted Successfully.";
     }
 
-    public List<Student> getVipStudents(int limit) {
+    public List<Student> getVipStudents(int limit)
+    {
         return studentRepository.findByMaxBorrowLimitGreaterThan(limit);
     }
 }

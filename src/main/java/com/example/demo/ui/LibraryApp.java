@@ -20,10 +20,15 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
+import javafx.scene.control.ListCell;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -92,6 +97,20 @@ public class LibraryApp extends Application {
         Platform.exit();
     }
 
+    private boolean isValidInput(String... fields) {
+        for (String field : fields) {
+            if (field == null || field.trim().isEmpty()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isNumeric(String str) {
+        if (str == null) return false;
+        return str.matches("-?\\d+(\\.\\d+)?"); // بيتحقق إن النص أرقام فقط
+    }
+
     private VBox createSidebar() {
         VBox sidebar = new VBox(5);
         sidebar.setPrefWidth(260);
@@ -102,11 +121,11 @@ public class LibraryApp extends Application {
         logo.setTextFill(Color.WHITE);
         logo.setPadding(new Insets(0, 0, 40, 20));
         sidebar.getChildren().addAll(logo,
-                createNavButton("🔄 Borrow Operations", borrowView, "Borrow"),
-                createNavButton("📖 Books Database", bookView, "Books"),
-                createNavButton("👨‍🎓 Students List", studentView, "Students"),
+                createNavButton("🔄    Borrow Operations", borrowView, "Borrow"),
+                createNavButton("📖    Books Database", bookView, "Books"),
+                createNavButton("👨‍🎓    Students List", studentView, "Students"),
                 createNavButton("🏛️ Departments", departmentView, "Departments"),
-                createNavButton("👤 Librarians", librarianView, "Librarians"));
+                createNavButton("👤    Librarians", librarianView, "Librarians"));
         return sidebar;
     }
 
@@ -163,31 +182,62 @@ public class LibraryApp extends Application {
     // ==================== STUDENT VIEW ====================
     private VBox createStudentView() {
         VBox layout = new VBox(25);
+
         VBox formCard = createCard("Add New Student");
-        GridPane grid = new GridPane(); grid.setHgap(20); grid.setVgap(15);
+        GridPane grid = new GridPane();
+        grid.setHgap(20); grid.setVgap(15);
+
         TextField fName = new TextField(); fName.setPromptText("First Name");
         TextField lName = new TextField(); lName.setPromptText("Last Name");
-        TextField email = new TextField(); email.setPromptText("student@example.com");
-        TextField limit = new TextField(); limit.setPromptText("Max Books (e.g. 3)");
-        studentDeptCombo = new ComboBox<>(); studentDeptCombo.setPromptText("Select Department");
+        TextField email = new TextField(); email.setPromptText("example@mail.com");
+        TextField limit = new TextField(); limit.setPromptText("Max Borrow Limit (e.g. 5)");
+
+        fName.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue.matches("[a-zA-Z]*")) {
+                fName.setText(newValue.replaceAll("[^a-zA-Z]", ""));
+            }
+        });
+
+        lName.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue.matches("[a-zA-Z]*")) {
+                lName.setText(newValue.replaceAll("[^a-zA-Z]", ""));
+            }
+        });
+
+        limit.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue.matches("\\d*")) {
+                limit.setText(newValue.replaceAll("[^\\d]", ""));
+            }
+        });
+
+        studentDeptCombo = new ComboBox<>();
+        studentDeptCombo.setPromptText("Select Department");
+        studentDeptCombo.setMaxWidth(Double.MAX_VALUE);
         studentDeptCombo.setConverter(new javafx.util.StringConverter<Department>() {
             @Override public String toString(Department d) { return d == null ? "" : d.getDeptName(); }
-            @Override public Department fromString(String s) { return null; }
+            @Override public Department fromString(String string) { return null; }
         });
+
         grid.addRow(0, new Label("First Name:"), fName, new Label("Last Name:"), lName);
-        grid.addRow(1, new Label("Email:"), email, new Label("Limit:"), limit);
+        grid.addRow(1, new Label("Email:"), email, new Label("Borrow Limit:"), limit);
         grid.addRow(2, new Label("Department:"), studentDeptCombo);
-        Button addBtn = createActionBtn("Add Student", SUCCESS_COLOR);
+
+        Button addBtn = createActionBtn("Register Student", SUCCESS_COLOR);
         formCard.getChildren().addAll(grid, addBtn);
 
         VBox tableCard = createCard("Student Directory");
-        HBox filterBar = new HBox(15); filterBar.setAlignment(Pos.CENTER_LEFT);
-        Button vipBtn = new Button("⭐ VIP Students (Limit > 5)");
-        vipBtn.setStyle("-fx-background-color: #F59E0B; -fx-text-fill: white; -fx-cursor: hand; -fx-padding: 8 15;");
-        Button allBtn = new Button("Refresh All");
+        HBox filterBar = new HBox(15);
+        filterBar.setAlignment(Pos.CENTER_LEFT);
+        filterBar.setPadding(new Insets(0, 0, 10, 0));
+
+        Button vipBtn = new Button("⭐ VIP Students");
+        vipBtn.setStyle("-fx-background-color: #F59E0B; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;");
+        Button allBtn = new Button("Show All");
+
         filterBar.getChildren().addAll(vipBtn, allBtn);
 
-        TableView<Student> table = new TableView<>(); setupStudentTable(table);
+        TableView<Student> table = new TableView<>();
+        setupStudentTable(table);
         refreshStudentTable(table);
 
         vipBtn.setOnAction(e -> table.getItems().setAll(studentService.getVipStudents(5)));
@@ -196,14 +246,55 @@ public class LibraryApp extends Application {
         VBox.setVgrow(table, Priority.ALWAYS);
         tableCard.getChildren().addAll(filterBar, table);
         layout.getChildren().addAll(formCard, tableCard);
+
         addBtn.setOnAction(e -> {
+            String firstName = fName.getText().trim();
+            String lastName = lName.getText().trim();
+            String emailAddr = email.getText().trim();
+            String limitStr = limit.getText().trim();
+            Department dept = studentDeptCombo.getValue();
+
+            if (firstName.isEmpty() || lastName.isEmpty() || emailAddr.isEmpty() || limitStr.isEmpty()) {
+                showAlert("Missing Data", "Please fill in all student details.", Alert.AlertType.WARNING);
+                return;
+            }
+
+            if (!emailAddr.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+                showAlert("Invalid Email", "Please enter a valid email format (e.g., name@domain.com).", Alert.AlertType.WARNING);
+                return;
+            }
+
+            if (dept == null) {
+                showAlert("Department Required", "Please assign the student to a department.", Alert.AlertType.WARNING);
+                return;
+            }
+
             try {
-                Student s = new Student(); s.setFirstname(fName.getText()); s.setLastname(lName.getText());
-                s.setEmail(email.getText()); s.setMaxBorrowLimit(Integer.parseInt(limit.getText()));
-                s.setDepartment(studentDeptCombo.getValue()); studentService.addStudent(s);
-                refreshStudentTable(table); fName.clear(); lName.clear(); email.clear(); limit.clear();
-            } catch (Exception ex) { showAlert("Error", "Check all fields", Alert.AlertType.ERROR); }
+                int maxLimit = Integer.parseInt(limitStr);
+                if (maxLimit <= 0 || maxLimit > 20) { // وضعنا حد منطقي مثلاً 20 كتاب
+                    showAlert("Limit Error", "Borrow limit must be between 1 and 20.", Alert.AlertType.WARNING);
+                    return;
+                }
+
+                Student s = new Student();
+                s.setFirstname(firstName);
+                s.setLastname(lastName);
+                s.setEmail(emailAddr);
+                s.setMaxBorrowLimit(maxLimit);
+                s.setDepartment(dept);
+
+                studentService.addStudent(s);
+                refreshStudentTable(table);
+
+                fName.clear(); lName.clear(); email.clear(); limit.clear();
+                studentDeptCombo.getSelectionModel().clearSelection();
+                showAlert("Success", "Student registered successfully!", Alert.AlertType.INFORMATION);
+
+            } catch (Exception ex) {
+                showAlert("Error", "Could not save student: " + ex.getMessage(), Alert.AlertType.ERROR);
+            }
         });
+
         return layout;
     }
 
@@ -246,37 +337,84 @@ public class LibraryApp extends Application {
     // ==================== BOOK VIEW ====================
     private VBox createBookView() {
         VBox layout = new VBox(25);
+
         VBox formCard = createCard("Catalog New Book");
-        GridPane grid = new GridPane(); grid.setHgap(20); grid.setVgap(15);
-        TextField title = new TextField(); title.setPromptText("Book Title");
-        TextField author = new TextField(); author.setPromptText("Author Name");
-        TextField cat = new TextField(); cat.setPromptText("Genre");
-        TextField copies = new TextField(); copies.setPromptText("Total Copies");
+        GridPane grid = new GridPane();
+        grid.setHgap(20); grid.setVgap(15);
+
+        TextField title = new TextField(); title.setPromptText("Enter Book Title");
+        TextField author = new TextField(); author.setPromptText("Enter Author Name");
+        TextField cat = new TextField(); cat.setPromptText("e.g. Science, History");
+        TextField copies = new TextField(); copies.setPromptText("Number of copies");
+
+        copies.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue.matches("\\d*")) {
+                copies.setText(newValue.replaceAll("[^\\d]", ""));
+            }
+        });
+
         grid.addRow(0, new Label("Title:"), title, new Label("Author:"), author);
         grid.addRow(1, new Label("Category:"), cat, new Label("Total Copies:"), copies);
-        Button addBtn = createActionBtn("Add Book", SUCCESS_COLOR);
+
+        Button addBtn = createActionBtn("Add Book to Library", SUCCESS_COLOR);
         formCard.getChildren().addAll(grid, addBtn);
 
-        VBox tableCard = createCard("Inventory Management");
-        CheckBox availableOnly = new CheckBox("Show In-Stock Only");
-        availableOnly.setFont(Font.font("System", FontWeight.SEMI_BOLD, 13));
-        TableView<Book> table = new TableView<>(); setupBookTable(table);
+        VBox tableCard = createCard("Library Inventory Management");
+        CheckBox availableOnly = new CheckBox("Display In-Stock Only (Copies > 0)");
+        availableOnly.setFont(Font.font("Segoe UI", FontWeight.SEMI_BOLD, 13));
+
+        TableView<Book> table = new TableView<>();
+        setupBookTable(table);
         refreshBookTable(table);
+
         availableOnly.setOnAction(e -> {
             if(availableOnly.isSelected()) table.getItems().setAll(bookService.getAvailableBooksOnly());
             else refreshBookTable(table);
         });
+
         VBox.setVgrow(table, Priority.ALWAYS);
         tableCard.getChildren().addAll(availableOnly, table);
         layout.getChildren().addAll(formCard, tableCard);
 
         addBtn.setOnAction(e -> {
-            try { Book b = new Book(); b.setTitle(title.getText()); b.setAuthor(author.getText());
-                b.setCategory(cat.getText()); int c = Integer.parseInt(copies.getText());
-                b.setTotalCopies(c); b.setAvailableCopies(c); bookService.addBook(b);
-                refreshBookTable(table); title.clear(); author.clear(); cat.clear(); copies.clear();
-            } catch (Exception ex) { showAlert("Error", "Invalid inputs", Alert.AlertType.ERROR); }
+            if (title.getText().trim().isEmpty() || author.getText().trim().isEmpty() ||
+                    cat.getText().trim().isEmpty() || copies.getText().trim().isEmpty()) {
+
+                showAlert("Validation Missing", "All fields must be filled before saving!", Alert.AlertType.WARNING);
+                return;
+            }
+
+            int numCopies;
+            try {
+                numCopies = Integer.parseInt(copies.getText());
+                if (numCopies <= 0) {
+                    showAlert("Invalid Data", "Total copies must be at least 1.", Alert.AlertType.WARNING);
+                    return;
+                }
+            } catch (NumberFormatException ex) {
+                showAlert("Input Error", "Please enter a valid whole number for copies.", Alert.AlertType.ERROR);
+                return;
+            }
+
+            try {
+                Book b = new Book();
+                b.setTitle(title.getText().trim());
+                b.setAuthor(author.getText().trim());
+                b.setCategory(cat.getText().trim());
+                b.setTotalCopies(numCopies);
+                b.setAvailableCopies(numCopies);
+
+                bookService.addBook(b);
+                refreshBookTable(table);
+
+                title.clear(); author.clear(); cat.clear(); copies.clear();
+                showAlert("Success", "Book has been cataloged successfully!", Alert.AlertType.INFORMATION);
+
+            } catch (Exception ex) {
+                showAlert("Database Error", "An error occurred while saving: " + ex.getMessage(), Alert.AlertType.ERROR);
+            }
         });
+
         return layout;
     }
 
@@ -314,20 +452,196 @@ public class LibraryApp extends Application {
     private void refreshBookTable(TableView<Book> t) { if(bookService != null) t.getItems().setAll(bookService.getAllBooks()); }
 
     // ==================== BORROW VIEW ====================
+//    private VBox createBorrowView() {
+//        VBox layout = new VBox(25);
+//        layout.setPadding(new Insets(20));
+//        HBox topSection = new HBox(20);
+//
+//        // --- كارت إصدار كتاب جديد (Issue Book) ---
+//        VBox issueCard = createCard("📥 Issue Book Operations");
+//        issueCard.setSpacing(20);
+//        HBox.setHgrow(issueCard, Priority.ALWAYS);
+//
+//        borrowStudentCombo = new ComboBox<>();
+//        borrowStudentCombo.setPromptText("Select Student Name");
+//
+//        borrowBookCombo = new ComboBox<>();
+//        borrowBookCombo.setPromptText("Select Book Title");
+//
+//        borrowLibCombo = new ComboBox<>();
+//        borrowLibCombo.setPromptText("Select Responsible Librarian");
+//
+//        // ضمان ظهور الـ Prompt Text بعد المسح
+//        borrowStudentCombo.setButtonCell(new ListCell<Student>() {
+//            @Override protected void updateItem(Student item, boolean empty) {
+//                super.updateItem(item, empty);
+//                if (empty || item == null) setText(borrowStudentCombo.getPromptText());
+//                else setText(item.getFirstname() + " " + item.getLastname());
+//            }
+//        });
+//
+//        borrowBookCombo.setButtonCell(new ListCell<Book>() {
+//            @Override protected void updateItem(Book item, boolean empty) {
+//                super.updateItem(item, empty);
+//                if (empty || item == null) setText(borrowBookCombo.getPromptText());
+//                else setText(item.getTitle());
+//            }
+//        });
+//
+//        borrowLibCombo.setButtonCell(new ListCell<Librarian>() {
+//            @Override protected void updateItem(Librarian item, boolean empty) {
+//                super.updateItem(item, empty);
+//                if (empty || item == null) setText(borrowLibCombo.getPromptText());
+//                else setText(item.getFirstname() + " " + item.getLastname());
+//            }
+//        });
+//
+//        borrowStudentCombo.setMaxWidth(Double.MAX_VALUE);
+//        borrowBookCombo.setMaxWidth(Double.MAX_VALUE);
+//        borrowLibCombo.setMaxWidth(Double.MAX_VALUE);
+//
+//        setupBorrowConverters();
+//
+//        Button issueBtn = createActionBtn("Confirm & Issue Book", ACCENT_COLOR);
+//        issueBtn.setMaxWidth(Double.MAX_VALUE);
+//
+//        issueCard.getChildren().addAll(borrowStudentCombo, borrowBookCombo, borrowLibCombo, issueBtn);
+//
+//        // --- كارت إرجاع كتاب (Return Book) ---
+//        VBox returnCard = createCard("📤 Return Book System");
+//        returnCard.setSpacing(20);
+//        HBox.setHgrow(returnCard, Priority.ALWAYS);
+//
+//        TextField borrowIdField = new TextField();
+//        borrowIdField.setPromptText("Enter Transaction ID (e.g. 101)");
+//        borrowIdField.setPrefHeight(45);
+//
+//        Button returnBtn = createActionBtn("Confirm Return", SUCCESS_COLOR);
+//        returnBtn.setMaxWidth(Double.MAX_VALUE);
+//
+//        returnCard.getChildren().addAll(borrowIdField, returnBtn);
+//
+//        topSection.getChildren().addAll(issueCard, returnCard);
+//
+//        // --- كارت سجل العمليات (الجدول + السيرش الجديد) ---
+//        VBox tableCard = createCard("Library Transaction Logs");
+//
+//        // 1. إنشاء بار السيرش والفلترة
+//        TextField searchField = new TextField();
+//        searchField.setPromptText("🔍 Search by Student, Book, or Librarian...");
+//        searchField.setPrefHeight(35);
+//        searchField.setStyle("-fx-background-radius: 20; -fx-padding: 0 15; -fx-border-color: #DDD; -fx-border-radius: 20;");
+//        HBox.setHgrow(searchField, Priority.ALWAYS);
+//
+//        Button overdueBtn = new Button("⚠️ Overdue");
+//        overdueBtn.setStyle("-fx-background-color: #EF4444; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;");
+//
+//        Button activeBtn = new Button("🔄 Active");
+//        activeBtn.setStyle("-fx-background-color: #3B82F6; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;");
+//
+//        Button viewAllBtn = new Button("All");
+//        viewAllBtn.setStyle("-fx-cursor: hand;");
+//
+//        HBox filterAndSearchHeader = new HBox(15, searchField, overdueBtn, activeBtn, viewAllBtn);
+//        filterAndSearchHeader.setAlignment(Pos.CENTER_LEFT);
+//        filterAndSearchHeader.setPadding(new Insets(0, 0, 15, 0));
+//
+//        TableView<Borrow> table = new TableView<>();
+//        setupBorrowTable(table);
+//        refreshBorrowTable(table);
+//
+//        // برمجة السيرش اللحظي (Real-time Search Logic)
+//        searchField.textProperty().addListener((observable, oldValue, newValue) -> {
+//            if (newValue == null || newValue.trim().isEmpty()) {
+//                refreshBorrowTable(table);
+//            } else {
+//                table.getItems().setAll(borrowService.searchTransactions(newValue.trim()));
+//            }
+//        });
+//
+//        // برمجة أزرار الفلترة
+//        overdueBtn.setOnAction(e -> {
+//            searchField.clear();
+//            table.getItems().setAll(borrowService.getOverdueLoans());
+//        });
+//        activeBtn.setOnAction(e -> {
+//            searchField.clear();
+//            table.getItems().setAll(borrowService.getBorrowsByStatus("BORROWED"));
+//        });
+//        viewAllBtn.setOnAction(e -> {
+//            searchField.clear();
+//            refreshBorrowTable(table);
+//        });
+//
+//        VBox.setVgrow(table, Priority.ALWAYS);
+//        tableCard.getChildren().addAll(filterAndSearchHeader, table);
+//
+//        // --- الأكشن لزرار الاستعارة ---
+//        issueBtn.setOnAction(e -> {
+//            if (borrowStudentCombo.getValue() == null || borrowBookCombo.getValue() == null || borrowLibCombo.getValue() == null) {
+//                showAlert("Input Missing", "Please select all required fields!", Alert.AlertType.WARNING);
+//                return;
+//            }
+//            try {
+//                String res = borrowService.borrowBook(
+//                        borrowStudentCombo.getValue().getStudentId(),
+//                        borrowBookCombo.getValue().getBookId(),
+//                        borrowLibCombo.getValue().getLibrarianId()
+//                );
+//                showAlert("Transaction Status", res, Alert.AlertType.INFORMATION);
+//
+//                if (res.toLowerCase().contains("successfully")) {
+//                    borrowStudentCombo.getSelectionModel().clearSelection();
+//                    borrowStudentCombo.setValue(null);
+//                    borrowBookCombo.getSelectionModel().clearSelection();
+//                    borrowBookCombo.setValue(null);
+//                    borrowLibCombo.getSelectionModel().clearSelection();
+//                    borrowLibCombo.setValue(null);
+//                    layout.requestFocus();
+//                }
+//                refreshBorrowTable(table);
+//            } catch (Exception ex) {
+//                showAlert("Error", "Transaction failed: " + ex.getMessage(), Alert.AlertType.ERROR);
+//            }
+//        });
+//
+//        // --- الأكشن لزرار الإرجاع ---
+//        returnBtn.setOnAction(e -> {
+//            String idText = borrowIdField.getText().trim();
+//            if (idText.isEmpty()) {
+//                showAlert("Input Error", "ID is required for return.", Alert.AlertType.WARNING);
+//                return;
+//            }
+//            try {
+//                String res = borrowService.returnBook(Integer.parseInt(idText));
+//                showAlert("Return Status", res, Alert.AlertType.INFORMATION);
+//                borrowIdField.clear();
+//                refreshBorrowTable(table);
+//            } catch (Exception ex) {
+//                showAlert("Error", "Could not process return.", Alert.AlertType.ERROR);
+//            }
+//        });
+//
+//        layout.getChildren().addAll(topSection, tableCard);
+//        return layout;
+//    }
+
     private VBox createBorrowView() {
         VBox layout = new VBox(25);
+        layout.setPadding(new Insets(20));
         HBox topSection = new HBox(20);
 
-        VBox issueCard = createCard("📥 Issue Book");
+        VBox issueCard = createCard("📥 Issue Book Operations");
+        issueCard.setSpacing(20);
         HBox.setHgrow(issueCard, Priority.ALWAYS);
 
         borrowStudentCombo = new ComboBox<>();
         borrowBookCombo = new ComboBox<>();
         borrowLibCombo = new ComboBox<>();
 
-        borrowStudentCombo.setPromptText("-- Select Student Name --");
-        borrowBookCombo.setPromptText("-- Select Book Title --");
-        borrowLibCombo.setPromptText("-- Select Librarian --");
+        setupSearchableComboBox(borrowStudentCombo, studentService.getAllStudents(), "student", "Select Student...");
+        setupSearchableComboBox(borrowBookCombo, bookService.getAllBooks(), "book", "Select Book...");
+        setupSearchableComboBox(borrowLibCombo, librarianService.getAllLibrarians(), "librarian", "Select Librarian...");
 
         borrowStudentCombo.setMaxWidth(Double.MAX_VALUE);
         borrowBookCombo.setMaxWidth(Double.MAX_VALUE);
@@ -335,80 +649,134 @@ public class LibraryApp extends Application {
 
         setupBorrowConverters();
 
-        Button issueBtn = createActionBtn("Process Transaction", ACCENT_COLOR);
+        Button issueBtn = createActionBtn("Confirm & Issue Book", ACCENT_COLOR);
         issueBtn.setMaxWidth(Double.MAX_VALUE);
         issueCard.getChildren().addAll(borrowStudentCombo, borrowBookCombo, borrowLibCombo, issueBtn);
 
-        VBox returnCard = createCard("📤 Return Book");
+        // --- كارت إرجاع كتاب ---
+        VBox returnCard = createCard("📤 Return Book System");
+        returnCard.setSpacing(20);
         HBox.setHgrow(returnCard, Priority.ALWAYS);
-
         TextField borrowIdField = new TextField();
-        borrowIdField.setPromptText("Enter Transaction ID (e.g., 101)");
-        borrowIdField.setPrefHeight(40);
-
+        borrowIdField.setPromptText("Enter Transaction ID");
+        borrowIdField.setPrefHeight(45);
         Button returnBtn = createActionBtn("Confirm Return", SUCCESS_COLOR);
         returnBtn.setMaxWidth(Double.MAX_VALUE);
-
-        Label returnLabel = new Label("Return using Transaction ID:");
-        returnLabel.setTextFill(Color.web(TEXT_DARK));
-
-        returnCard.getChildren().addAll(returnLabel, borrowIdField, returnBtn);
+        returnCard.getChildren().addAll(borrowIdField, returnBtn);
 
         topSection.getChildren().addAll(issueCard, returnCard);
 
-        VBox tableCard = createCard("Transaction History");
+        // --- كارت سجل العمليات (الجدول والسيرش العام) ---
+        VBox tableCard = createCard("Library Transaction Logs");
+        TextField searchField = new TextField();
+        searchField.setPromptText("🔍 Search History (Student, Book, or Librarian)...");
+        searchField.setPrefHeight(35);
+        searchField.setStyle("-fx-background-radius: 20; -fx-padding: 0 15;");
+        HBox.setHgrow(searchField, Priority.ALWAYS);
 
-        Button overdueBtn = new Button("⚠️ Overdue Only");
-        overdueBtn.setStyle("-fx-background-color: #EF4444; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 8 15;");
-
-        Button activeBtn = new Button("🔄 Active Borrows");
-        activeBtn.setStyle("-fx-background-color: #3B82F6; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 8 15;");
-
-        Button viewAllBtn = new Button("View All History");
-        viewAllBtn.setStyle("-fx-padding: 8 15; -fx-cursor: hand;");
-
-        HBox filterBar = new HBox(15, overdueBtn, activeBtn, viewAllBtn);
-        filterBar.setPadding(new Insets(0, 0, 15, 0));
-        filterBar.setAlignment(Pos.CENTER_LEFT);
+        Button overdueBtn = new Button("⚠️ Overdue");
+        Button activeBtn = new Button("🔄 Active");
+        Button viewAllBtn = new Button("All");
+        HBox filterHeader = new HBox(15, searchField, overdueBtn, activeBtn, viewAllBtn);
+        filterHeader.setPadding(new Insets(0, 0, 15, 0));
 
         TableView<Borrow> table = new TableView<>();
         setupBorrowTable(table);
         refreshBorrowTable(table);
+
+        searchField.textProperty().addListener((obs, old, newVal) -> {
+            table.getItems().setAll(borrowService.searchTransactions(newVal));
+        });
 
         overdueBtn.setOnAction(e -> table.getItems().setAll(borrowService.getOverdueLoans()));
         activeBtn.setOnAction(e -> table.getItems().setAll(borrowService.getBorrowsByStatus("BORROWED")));
         viewAllBtn.setOnAction(e -> refreshBorrowTable(table));
 
         VBox.setVgrow(table, Priority.ALWAYS);
-        tableCard.getChildren().addAll(filterBar, table);
+        tableCard.getChildren().addAll(filterHeader, table);
 
+        // --- أكشن زرار الاستعارة ---
         issueBtn.setOnAction(e -> {
+            if (borrowStudentCombo.getValue() == null || borrowBookCombo.getValue() == null || borrowLibCombo.getValue() == null) {
+                showAlert("Input Missing", "Please select valid entries from the lists!", Alert.AlertType.WARNING);
+                return;
+            }
             try {
                 String res = borrowService.borrowBook(
                         borrowStudentCombo.getValue().getStudentId(),
                         borrowBookCombo.getValue().getBookId(),
                         borrowLibCombo.getValue().getLibrarianId()
                 );
-                showAlert("System Message", res, Alert.AlertType.INFORMATION);
+                showAlert("Transaction Status", res, Alert.AlertType.INFORMATION);
+                if (res.toLowerCase().contains("successfully")) {
+                    borrowStudentCombo.setValue(null);
+                    borrowBookCombo.setValue(null);
+                    borrowLibCombo.setValue(null);
+                    layout.requestFocus();
+                }
                 refreshBorrowTable(table);
-            } catch (Exception ex) {
-                showAlert("Selection Error", "Please select a student, a book, and a librarian.", Alert.AlertType.ERROR);
-            }
+            } catch (Exception ex) { showAlert("Error", "Action failed", Alert.AlertType.ERROR); }
         });
 
         returnBtn.setOnAction(e -> {
             try {
                 String res = borrowService.returnBook(Integer.parseInt(borrowIdField.getText()));
-                showAlert("System Message", res, Alert.AlertType.INFORMATION);
+                showAlert("Status", res, Alert.AlertType.INFORMATION);
                 borrowIdField.clear();
                 refreshBorrowTable(table);
-            } catch (Exception ex) {
-                showAlert("Input Error", "Please enter a valid Numeric Transaction ID.", Alert.AlertType.ERROR);
-            }
+            } catch (Exception ex) { showAlert("Error", "Invalid ID", Alert.AlertType.ERROR); }
         });
 
         layout.getChildren().addAll(topSection, tableCard);
         return layout;
+    }
+
+    private <T> void setupSearchableComboBox(ComboBox<T> comboBox, List<T> items, String type, String placeholder) {
+        if (items == null) return;
+
+        // 1. فك ارتباط البيانات بـ Hibernate تماماً
+        ObservableList<T> originalList = FXCollections.observableArrayList(new ArrayList<>(items));
+
+        // 2. إعداد القائمة كقائمة اختيار عادية (غير قابلة للكتابة لضمان الاستقرار)
+        comboBox.setItems(originalList);
+        comboBox.setEditable(false);
+        comboBox.setPromptText(placeholder);
+
+        // 3. إعداد شكل عرض العناصر (الاسم الأول + الأخير)
+        comboBox.setCellFactory(lv -> new ListCell<T>() {
+            @Override
+            protected void updateItem(T item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(getDisplayName(item, type));
+                }
+            }
+        });
+
+        // 4. إعداد شكل العنصر المختار
+        comboBox.setButtonCell(new ListCell<T>() {
+            @Override
+            protected void updateItem(T item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(placeholder); // يعرض الـ Placeholder لو مفيش اختيار
+                } else {
+                    setText(getDisplayName(item, type));
+                }
+            }
+        });
+    }
+
+    private String getDisplayName(Object item, String type) {
+        if (item == null) return "";
+        return switch (type) {
+            case "student" -> ((Student) item).getFirstname() + " " + ((Student) item).getLastname();
+            case "book" -> ((Book) item).getTitle();
+            case "librarian" -> ((Librarian) item).getFirstname() + " " + ((Librarian) item).getLastname();
+            default -> item.toString();
+        };
     }
 
     private void setupBorrowConverters() {
@@ -427,70 +795,266 @@ public class LibraryApp extends Application {
     }
 
     private void setupBorrowTable(TableView<Borrow> t) {
-        TableColumn<Borrow, String> id = new TableColumn<>("Txn ID");
-        id.setCellValueFactory(cd -> new SimpleStringProperty(String.valueOf(cd.getValue().getBorrowId())));
+        TableColumn<Borrow, String> idCol = new TableColumn<>("Txn ID");
+        idCol.setCellValueFactory(cd -> new SimpleStringProperty(String.valueOf(cd.getValue().getBorrowId())));
 
-        TableColumn<Borrow, String> st = new TableColumn<>("Student");
-        st.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getStudent() != null ? cd.getValue().getStudent().getFirstname() : ""));
-
-        TableColumn<Borrow, String> bk = new TableColumn<>("Book");
-        bk.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getBook() != null ? cd.getValue().getBook().getTitle() : ""));
-
-        TableColumn<Borrow, String> sts = new TableColumn<>("Status");
-        sts.setCellValueFactory(cd -> {
-            Borrow b = cd.getValue();
-            if ("BORROWED".equalsIgnoreCase(b.getStatus())) {
-                if (b.getDueDate() != null && b.getDueDate().before(new java.util.Date())) {
-                    return new SimpleStringProperty("⚠️ Overdue");
-                }
-                return new SimpleStringProperty("Borrowed");
-            }
-            return new SimpleStringProperty("Returned");
+        TableColumn<Borrow, String> studentCol = new TableColumn<>("Student");
+        studentCol.setCellValueFactory(cd -> {
+            Student s = cd.getValue().getStudent();
+            return new SimpleStringProperty(s != null ? s.getFirstname() + " " + s.getLastname() : "N/A");
         });
 
-        t.getColumns().setAll(id, st, bk, sts);
+        TableColumn<Borrow, String> bookCol = new TableColumn<>("Book");
+        bookCol.setCellValueFactory(cd -> {
+            Book b = cd.getValue().getBook();
+            return new SimpleStringProperty(b != null ? b.getTitle() : "N/A");
+        });
+
+        TableColumn<Borrow, String> statusCol = new TableColumn<>("Status");
+        statusCol.setCellValueFactory(cd -> {
+            Borrow b = cd.getValue();
+            String currentStatus = b.getStatus();
+
+            if ("BORROWED".equalsIgnoreCase(currentStatus)) {
+                if (b.getDueDate() != null && b.getDueDate().before(new java.util.Date())) {
+                    return new SimpleStringProperty("⚠️ OVERDUE");
+                }
+                return new SimpleStringProperty("🔄 Borrowed");
+            }
+            return new SimpleStringProperty("✅ Returned");
+        });
+
+        // --- الجزء المسؤول عن الألوان (الذي سيعيد اللون الأخضر) ---
+        statusCol.setCellFactory(column -> new TableCell<Borrow, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+                    setText(item);
+                    // تلوين الحالة بناءً على النص
+                    if (item.contains("Returned")) {
+                        setTextFill(Color.web("#10B981")); // لون أخضر مريح (Emerald Green)
+                        setStyle("-fx-font-weight: bold;");
+                    } else if (item.contains("OVERDUE")) {
+                        setTextFill(Color.web("#EF4444")); // لون أحمر صريح
+                        setStyle("-fx-font-weight: bold;");
+                    } else if (item.contains("Borrowed")) {
+                        setTextFill(Color.web("#3B82F6")); // لون أزرق للعمليات النشطة
+                        setStyle("-fx-font-weight: bold;");
+                    } else {
+                        setTextFill(Color.BLACK);
+                        setStyle("");
+                    }
+                }
+            }
+        });
+
+        t.getColumns().setAll(idCol, studentCol, bookCol, statusCol);
         t.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
     }
-    private void refreshBorrowTable(TableView<Borrow> t) { if(borrowService != null) t.getItems().setAll(borrowService.getAllBorrows()); }
+//    private void refreshBorrowTable(TableView<Borrow> t) {
+//        if(borrowService != null)
+//            t.getItems().setAll(borrowService.getAllBorrows());
+//    }
+    private void refreshBorrowTable(TableView<Borrow> table) {
+        try {
+            List<Borrow> allBorrows = borrowService.getAllBorrows();
+            if (allBorrows == null) allBorrows = new ArrayList<>();
+            // نستخدم ArrayList عشان نفصل البيانات عن الـ Session بتاعة Hibernate
+            table.getItems().setAll(new ArrayList<>(allBorrows));
+        } catch (Exception e) {
+            System.err.println("Error refreshing table: " + e.getMessage());
+        }
+    }
 
     // ==================== DEPARTMENT & LIBRARIAN ====================
     private VBox createDepartmentView() {
-        VBox layout = new VBox(25); VBox card = createCard("Add Department");
-        TextField name = new TextField(); name.setPromptText("Enter Department Name"); Button save = createActionBtn("Save", SUCCESS_COLOR);
-        card.getChildren().addAll(new Label("Department Name:"), name, save);
+        VBox layout = new VBox(25);
+
+        VBox formCard = createCard("Manage Departments");
+        GridPane grid = new GridPane();
+        grid.setHgap(20); grid.setVgap(15);
+
+        TextField deptNameField = new TextField();
+        deptNameField.setPromptText("e.g., Computer Science, Engineering");
+        deptNameField.setPrefWidth(300);
+
+        deptNameField.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue.matches("[a-zA-Z\\s]*")) {
+                deptNameField.setText(newValue.replaceAll("[^a-zA-Z\\s]", ""));
+            }
+        });
+
+        grid.addRow(0, new Label("Department Name:"), deptNameField);
+
+        Button addBtn = createActionBtn("Create Department", SUCCESS_COLOR);
+        formCard.getChildren().addAll(grid, addBtn);
+
         VBox tableCard = createCard("Existing Departments");
-        TableView<Department> t = new TableView<>();
-        TableColumn<Department, Integer> idc = new TableColumn<>("ID"); idc.setCellValueFactory(new PropertyValueFactory<>("deptId"));
-        TableColumn<Department, String> nc = new TableColumn<>("Name"); nc.setCellValueFactory(new PropertyValueFactory<>("deptName"));
-        t.getColumns().addAll(idc, nc); refreshDepartmentTable(t); tableCard.getChildren().add(t);
-        save.setOnAction(e -> { Department d = new Department(); d.setDeptName(name.getText()); departmentService.addDepartment(d); refreshDepartmentTable(t); name.clear(); });
-        layout.getChildren().addAll(card, tableCard); return layout;
+
+        TableView<Department> table = new TableView<>();
+
+        TableColumn<Department, Integer> idCol = new TableColumn<>("ID");
+        idCol.setCellValueFactory(new PropertyValueFactory<>("deptId"));
+        idCol.setPrefWidth(100);
+
+        TableColumn<Department, String> nameCol = new TableColumn<>("Department Name");
+        nameCol.setCellValueFactory(new PropertyValueFactory<>("deptName"));
+
+        table.getColumns().setAll(idCol, nameCol);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        refreshDepartmentTable(table);
+
+        VBox.setVgrow(table, Priority.ALWAYS);
+        tableCard.getChildren().add(table);
+
+        addBtn.setOnAction(e -> {
+            String name = deptNameField.getText().trim();
+
+            if (name.isEmpty()) {
+                showAlert("Input Error", "Department name cannot be empty!", Alert.AlertType.WARNING);
+                return;
+            }
+
+            if (name.length() < 2) {
+                showAlert("Input Error", "Department name is too short!", Alert.AlertType.WARNING);
+                return;
+            }
+
+            try {
+                Department d = new Department();
+                d.setDeptName(name);
+
+                departmentService.addDepartment(d);
+                refreshDepartmentTable(table);
+
+                deptNameField.clear();
+                showAlert("Success", "Department '" + name + "' added successfully!", Alert.AlertType.INFORMATION);
+
+            } catch (Exception ex) {
+                showAlert("Database Error", "This department might already exist or there's a connection issue.", Alert.AlertType.ERROR);
+            }
+        });
+
+        layout.getChildren().addAll(formCard, tableCard);
+        return layout;
     }
     private void refreshDepartmentTable(TableView<Department> t) { if(departmentService!=null) t.getItems().setAll(departmentService.getAllDepartments()); }
 
     private VBox createLibrarianView() {
-        VBox layout = new VBox(25); VBox card = createCard("Register Staff");
-        TextField fn = new TextField(); TextField ln = new TextField();
+        VBox layout = new VBox(25);
+
+        VBox formCard = createCard("Register New Librarian");
+        GridPane grid = new GridPane();
+        grid.setHgap(20); grid.setVgap(15);
+
+        TextField fn = new TextField(); fn.setPromptText("First Name");
+        TextField ln = new TextField(); ln.setPromptText("Last Name");
+
         ComboBox<String> shift = new ComboBox<>(FXCollections.observableArrayList("MORNING", "EVENING", "NIGHT"));
-        shift.setPromptText("Select Shift"); Button add = createActionBtn("Add", SUCCESS_COLOR);
-        card.getChildren().addAll(new Label("Name:"), fn, ln, new Label("Work Shift:"), shift, add);
+        shift.setPromptText("Select Work Shift");
+        shift.setMaxWidth(Double.MAX_VALUE);
+
+        fn.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue.matches("[a-zA-Z\\s]*")) {
+                fn.setText(newValue.replaceAll("[^a-zA-Z\\s]", ""));
+            }
+        });
+        ln.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue.matches("[a-zA-Z\\s]*")) {
+                ln.setText(newValue.replaceAll("[^a-zA-Z\\s]", ""));
+            }
+        });
+
+        grid.addRow(0, new Label("First Name:"), fn, new Label("Last Name:"), ln);
+        grid.addRow(1, new Label("Shift:"), shift);
+
+        Button addBtn = createActionBtn("Add Librarian", SUCCESS_COLOR);
+        formCard.getChildren().addAll(grid, addBtn);
 
         VBox tableCard = createCard("Staff Directory");
-        ComboBox<String> filter = new ComboBox<>(FXCollections.observableArrayList("ALL", "MORNING", "EVENING", "NIGHT"));
-        filter.setPromptText("Quick Filter by Shift");
-        TableView<Librarian> t = new TableView<>();
-        TableColumn<Librarian, String> nc = new TableColumn<>("Name"); nc.setCellValueFactory(new PropertyValueFactory<>("firstname"));
-        TableColumn<Librarian, String> sc = new TableColumn<>("Shift"); sc.setCellValueFactory(new PropertyValueFactory<>("shift"));
-        t.getColumns().setAll(nc, sc);
-        filter.setOnAction(e -> { if("ALL".equals(filter.getValue())) refreshLibrarianTable(t); else t.getItems().setAll(librarianService.getLibrariansByShift(filter.getValue())); });
-        refreshLibrarianTable(t); tableCard.getChildren().addAll(filter, t);
-        add.setOnAction(e -> { Librarian l = new Librarian(); l.setFirstname(fn.getText()); l.setLastname(ln.getText()); l.setShift(shift.getValue()); librarianService.addLibrarian(l); refreshLibrarianTable(t); });
-        layout.getChildren().addAll(card, tableCard); return layout;
+
+        ComboBox<String> filterCombo = new ComboBox<>(FXCollections.observableArrayList("ALL", "MORNING", "EVENING", "NIGHT"));
+        filterCombo.setPromptText("Filter by Shift");
+
+        TableView<Librarian> table = new TableView<>();
+
+        TableColumn<Librarian, Integer> idCol = new TableColumn<>("ID");
+        idCol.setCellValueFactory(new PropertyValueFactory<>("librarianId"));
+
+        TableColumn<Librarian, String> nameCol = new TableColumn<>("Full Name");
+        nameCol.setCellValueFactory(cellData ->
+                new SimpleStringProperty(cellData.getValue().getFirstname() + " " + cellData.getValue().getLastname()));
+
+        TableColumn<Librarian, String> shiftCol = new TableColumn<>("Shift");
+        shiftCol.setCellValueFactory(new PropertyValueFactory<>("shift"));
+
+        table.getColumns().setAll(idCol, nameCol, shiftCol);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        filterCombo.setOnAction(e -> {
+            if ("ALL".equals(filterCombo.getValue())) {
+                refreshLibrarianTable(table);
+            } else {
+                table.getItems().setAll(librarianService.getLibrariansByShift(filterCombo.getValue()));
+            }
+        });
+
+        refreshLibrarianTable(table);
+
+        VBox.setVgrow(table, Priority.ALWAYS);
+        tableCard.getChildren().addAll(new Label("Quick Filter:"), filterCombo, table);
+
+        addBtn.setOnAction(e -> {
+            String firstName = fn.getText().trim();
+            String lastName = ln.getText().trim();
+            String selectedShift = shift.getValue();
+
+            if (firstName.isEmpty() || lastName.isEmpty() || selectedShift == null) {
+                showAlert("Missing Data", "Please enter names and select a shift.", Alert.AlertType.WARNING);
+                return;
+            }
+
+            try {
+                Librarian l = new Librarian();
+                l.setFirstname(firstName);
+                l.setLastname(lastName);
+                l.setShift(selectedShift);
+
+                librarianService.addLibrarian(l);
+                refreshLibrarianTable(table);
+
+                fn.clear(); ln.clear(); shift.getSelectionModel().clearSelection();
+                showAlert("Success", "Librarian added to the system!", Alert.AlertType.INFORMATION);
+
+            } catch (Exception ex) {
+                showAlert("Error", "Could not save librarian: " + ex.getMessage(), Alert.AlertType.ERROR);
+            }
+        });
+
+        layout.getChildren().addAll(formCard, tableCard);
+        return layout;
     }
+
     private void refreshLibrarianTable(TableView<Librarian> t) { if(librarianService!=null) t.getItems().setAll(librarianService.getAllLibrarians()); }
 
     private void showAlert(String t, String c, Alert.AlertType type) {
         Alert a = new Alert(type); a.setTitle(t); a.setHeaderText(null); a.setContentText(c); a.showAndWait();
+    }
+
+    private <T> void makeSearchable(ComboBox<T> comboBox) {
+        comboBox.setEditable(true);
+        comboBox.getEditor().textProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal == null || newVal.isEmpty()) {
+                comboBox.hide();
+            } else {
+                comboBox.show();
+            }
+        });
     }
 
     public static void main(String[] args) { launch(args); }

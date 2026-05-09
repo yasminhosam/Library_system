@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class BorrowService {
@@ -58,6 +59,15 @@ public class BorrowService {
         return  "Borrowed Successfully";
     }
 
+    public List<Borrow> searchTransactions(String keyword) {
+        return borrowRepository.findAll().stream()
+                .filter(b ->
+                        (b.getStudent() != null && (b.getStudent().getFirstname() + " " + b.getStudent().getLastname()).toLowerCase().contains(keyword.toLowerCase())) ||
+                                (b.getBook() != null && b.getBook().getTitle().toLowerCase().contains(keyword.toLowerCase())) ||
+                                (b.getLibrarian() != null && (b.getLibrarian().getFirstname() + " " + b.getLibrarian().getLastname()).toLowerCase().contains(keyword.toLowerCase()))
+                )
+                .collect(Collectors.toList());
+    }
 
     public List<Borrow> getBorrowsByStatus(String status) {
         return borrowRepository.findByStatus(status);

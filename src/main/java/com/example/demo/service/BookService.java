@@ -3,6 +3,7 @@ package com.example.demo.service;
 import com.example.demo.entity.Book;
 import com.example.demo.repository.BookRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,13 +16,11 @@ public class BookService {
 
 
     public Book addBook(Book book) {
-
         return bookRepository.save(book);
     }
 
     public List<Book> getAllBooks() {
-
-        return bookRepository.findAll();
+        return bookRepository.findAll(Sort.by(Sort.Direction.ASC, "title"));
     }
 
     public Book getBookById(int id) {

@@ -3,6 +3,7 @@ package com.example.demo.service;
 import com.example.demo.entity.Librarian;
 import com.example.demo.repository.LibrarianRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,14 +14,14 @@ public class LibrarianService {
     @Autowired
     private LibrarianRepository librarianRepository;
 
-    public Librarian addLibrarian(Librarian librarian) {
+    public Librarian addLibrarian(Librarian librarian)
+    {
         return librarianRepository.save(librarian);
     }
 
     public List<Librarian> getAllLibrarians() {
-        return librarianRepository.findAll();
+        return librarianRepository.findAll(Sort.by(Sort.Direction.ASC, "firstname"));
     }
-
     public Librarian getLibrarianById(int id) {
         return librarianRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Librarian not found"));
@@ -46,7 +47,8 @@ public class LibrarianService {
         return "Deleted Successfully";
     }
 
-    public List<Librarian> getLibrariansByShift(String shift) {
+    public List<Librarian> getLibrariansByShift(String shift)
+    {
         return librarianRepository.findByShift(shift);
     }
 }

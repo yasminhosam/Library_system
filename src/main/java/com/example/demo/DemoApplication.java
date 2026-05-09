@@ -10,12 +10,12 @@ import org.springframework.boot.CommandLineRunner;
 @SpringBootApplication
 public class DemoApplication {
 
-	@Autowired
-	private StudentService studentService;
+    @Autowired
+    private StudentService studentService;
 
-	public static void main(String[] args) {
-		SpringApplication.run(DemoApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(DemoApplication.class, args);
+    }
 //
 //	@Override
 //	public void run(String... args) {
