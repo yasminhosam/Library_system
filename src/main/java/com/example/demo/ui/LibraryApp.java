@@ -108,7 +108,7 @@ public class LibraryApp extends Application {
 
     private boolean isNumeric(String str) {
         if (str == null) return false;
-        return str.matches("-?\\d+(\\.\\d+)?"); // بيتحقق إن النص أرقام فقط
+        return str.matches("-?\\d+(\\.\\d+)?");
     }
 
     private VBox createSidebar() {
@@ -179,7 +179,6 @@ public class LibraryApp extends Application {
         return btn;
     }
 
-    // ==================== STUDENT VIEW ====================
     private VBox createStudentView() {
         VBox layout = new VBox(25);
 
@@ -271,7 +270,7 @@ public class LibraryApp extends Application {
 
             try {
                 int maxLimit = Integer.parseInt(limitStr);
-                if (maxLimit <= 0 || maxLimit > 20) { // وضعنا حد منطقي مثلاً 20 كتاب
+                if (maxLimit <= 0 || maxLimit > 20) {
                     showAlert("Limit Error", "Borrow limit must be between 1 and 20.", Alert.AlertType.WARNING);
                     return;
                 }
@@ -299,12 +298,26 @@ public class LibraryApp extends Application {
     }
 
     private void setupStudentTable(TableView<Student> table) {
-        TableColumn<Student, Integer> idCol = new TableColumn<>("ID"); idCol.setCellValueFactory(new PropertyValueFactory<>("studentId"));
-        TableColumn<Student, String> fNameCol = new TableColumn<>("First Name"); fNameCol.setCellValueFactory(new PropertyValueFactory<>("firstname"));
-        TableColumn<Student, String> lNameCol = new TableColumn<>("Last Name"); lNameCol.setCellValueFactory(new PropertyValueFactory<>("lastname"));
-        TableColumn<Student, String> emailCol = new TableColumn<>("Email"); emailCol.setCellValueFactory(new PropertyValueFactory<>("email"));
-        table.getColumns().setAll(idCol, fNameCol, lNameCol, emailCol);
+        TableColumn<Student, Integer> idCol = new TableColumn<>("ID");
+        idCol.setCellValueFactory(new PropertyValueFactory<>("studentId"));
+
+        TableColumn<Student, String> fNameCol = new TableColumn<>("First Name");
+        fNameCol.setCellValueFactory(new PropertyValueFactory<>("firstname"));
+
+        TableColumn<Student, String> lNameCol = new TableColumn<>("Last Name");
+        lNameCol.setCellValueFactory(new PropertyValueFactory<>("lastname"));
+
+        TableColumn<Student, String> emailCol = new TableColumn<>("Email");
+        emailCol.setCellValueFactory(new PropertyValueFactory<>("email"));
+
+
+        TableColumn<Student, Integer> limitCol = new TableColumn<>("Borrow Limit");
+        limitCol.setCellValueFactory(new PropertyValueFactory<>("maxBorrowLimit"));
+
+
+        table.getColumns().setAll(idCol, fNameCol, lNameCol, emailCol, limitCol);
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
         table.setRowFactory(tv -> {
             TableRow<Student> row = new TableRow<>();
             ContextMenu menu = new ContextMenu();
@@ -334,7 +347,7 @@ public class LibraryApp extends Application {
 
     private void refreshStudentTable(TableView<Student> t) { if(studentService != null) t.getItems().setAll(studentService.getAllStudents()); }
 
-    // ==================== BOOK VIEW ====================
+
     private VBox createBookView() {
         VBox layout = new VBox(25);
 
@@ -451,181 +464,6 @@ public class LibraryApp extends Application {
 
     private void refreshBookTable(TableView<Book> t) { if(bookService != null) t.getItems().setAll(bookService.getAllBooks()); }
 
-    // ==================== BORROW VIEW ====================
-//    private VBox createBorrowView() {
-//        VBox layout = new VBox(25);
-//        layout.setPadding(new Insets(20));
-//        HBox topSection = new HBox(20);
-//
-//        // --- كارت إصدار كتاب جديد (Issue Book) ---
-//        VBox issueCard = createCard("📥 Issue Book Operations");
-//        issueCard.setSpacing(20);
-//        HBox.setHgrow(issueCard, Priority.ALWAYS);
-//
-//        borrowStudentCombo = new ComboBox<>();
-//        borrowStudentCombo.setPromptText("Select Student Name");
-//
-//        borrowBookCombo = new ComboBox<>();
-//        borrowBookCombo.setPromptText("Select Book Title");
-//
-//        borrowLibCombo = new ComboBox<>();
-//        borrowLibCombo.setPromptText("Select Responsible Librarian");
-//
-//        // ضمان ظهور الـ Prompt Text بعد المسح
-//        borrowStudentCombo.setButtonCell(new ListCell<Student>() {
-//            @Override protected void updateItem(Student item, boolean empty) {
-//                super.updateItem(item, empty);
-//                if (empty || item == null) setText(borrowStudentCombo.getPromptText());
-//                else setText(item.getFirstname() + " " + item.getLastname());
-//            }
-//        });
-//
-//        borrowBookCombo.setButtonCell(new ListCell<Book>() {
-//            @Override protected void updateItem(Book item, boolean empty) {
-//                super.updateItem(item, empty);
-//                if (empty || item == null) setText(borrowBookCombo.getPromptText());
-//                else setText(item.getTitle());
-//            }
-//        });
-//
-//        borrowLibCombo.setButtonCell(new ListCell<Librarian>() {
-//            @Override protected void updateItem(Librarian item, boolean empty) {
-//                super.updateItem(item, empty);
-//                if (empty || item == null) setText(borrowLibCombo.getPromptText());
-//                else setText(item.getFirstname() + " " + item.getLastname());
-//            }
-//        });
-//
-//        borrowStudentCombo.setMaxWidth(Double.MAX_VALUE);
-//        borrowBookCombo.setMaxWidth(Double.MAX_VALUE);
-//        borrowLibCombo.setMaxWidth(Double.MAX_VALUE);
-//
-//        setupBorrowConverters();
-//
-//        Button issueBtn = createActionBtn("Confirm & Issue Book", ACCENT_COLOR);
-//        issueBtn.setMaxWidth(Double.MAX_VALUE);
-//
-//        issueCard.getChildren().addAll(borrowStudentCombo, borrowBookCombo, borrowLibCombo, issueBtn);
-//
-//        // --- كارت إرجاع كتاب (Return Book) ---
-//        VBox returnCard = createCard("📤 Return Book System");
-//        returnCard.setSpacing(20);
-//        HBox.setHgrow(returnCard, Priority.ALWAYS);
-//
-//        TextField borrowIdField = new TextField();
-//        borrowIdField.setPromptText("Enter Transaction ID (e.g. 101)");
-//        borrowIdField.setPrefHeight(45);
-//
-//        Button returnBtn = createActionBtn("Confirm Return", SUCCESS_COLOR);
-//        returnBtn.setMaxWidth(Double.MAX_VALUE);
-//
-//        returnCard.getChildren().addAll(borrowIdField, returnBtn);
-//
-//        topSection.getChildren().addAll(issueCard, returnCard);
-//
-//        // --- كارت سجل العمليات (الجدول + السيرش الجديد) ---
-//        VBox tableCard = createCard("Library Transaction Logs");
-//
-//        // 1. إنشاء بار السيرش والفلترة
-//        TextField searchField = new TextField();
-//        searchField.setPromptText("🔍 Search by Student, Book, or Librarian...");
-//        searchField.setPrefHeight(35);
-//        searchField.setStyle("-fx-background-radius: 20; -fx-padding: 0 15; -fx-border-color: #DDD; -fx-border-radius: 20;");
-//        HBox.setHgrow(searchField, Priority.ALWAYS);
-//
-//        Button overdueBtn = new Button("⚠️ Overdue");
-//        overdueBtn.setStyle("-fx-background-color: #EF4444; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;");
-//
-//        Button activeBtn = new Button("🔄 Active");
-//        activeBtn.setStyle("-fx-background-color: #3B82F6; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;");
-//
-//        Button viewAllBtn = new Button("All");
-//        viewAllBtn.setStyle("-fx-cursor: hand;");
-//
-//        HBox filterAndSearchHeader = new HBox(15, searchField, overdueBtn, activeBtn, viewAllBtn);
-//        filterAndSearchHeader.setAlignment(Pos.CENTER_LEFT);
-//        filterAndSearchHeader.setPadding(new Insets(0, 0, 15, 0));
-//
-//        TableView<Borrow> table = new TableView<>();
-//        setupBorrowTable(table);
-//        refreshBorrowTable(table);
-//
-//        // برمجة السيرش اللحظي (Real-time Search Logic)
-//        searchField.textProperty().addListener((observable, oldValue, newValue) -> {
-//            if (newValue == null || newValue.trim().isEmpty()) {
-//                refreshBorrowTable(table);
-//            } else {
-//                table.getItems().setAll(borrowService.searchTransactions(newValue.trim()));
-//            }
-//        });
-//
-//        // برمجة أزرار الفلترة
-//        overdueBtn.setOnAction(e -> {
-//            searchField.clear();
-//            table.getItems().setAll(borrowService.getOverdueLoans());
-//        });
-//        activeBtn.setOnAction(e -> {
-//            searchField.clear();
-//            table.getItems().setAll(borrowService.getBorrowsByStatus("BORROWED"));
-//        });
-//        viewAllBtn.setOnAction(e -> {
-//            searchField.clear();
-//            refreshBorrowTable(table);
-//        });
-//
-//        VBox.setVgrow(table, Priority.ALWAYS);
-//        tableCard.getChildren().addAll(filterAndSearchHeader, table);
-//
-//        // --- الأكشن لزرار الاستعارة ---
-//        issueBtn.setOnAction(e -> {
-//            if (borrowStudentCombo.getValue() == null || borrowBookCombo.getValue() == null || borrowLibCombo.getValue() == null) {
-//                showAlert("Input Missing", "Please select all required fields!", Alert.AlertType.WARNING);
-//                return;
-//            }
-//            try {
-//                String res = borrowService.borrowBook(
-//                        borrowStudentCombo.getValue().getStudentId(),
-//                        borrowBookCombo.getValue().getBookId(),
-//                        borrowLibCombo.getValue().getLibrarianId()
-//                );
-//                showAlert("Transaction Status", res, Alert.AlertType.INFORMATION);
-//
-//                if (res.toLowerCase().contains("successfully")) {
-//                    borrowStudentCombo.getSelectionModel().clearSelection();
-//                    borrowStudentCombo.setValue(null);
-//                    borrowBookCombo.getSelectionModel().clearSelection();
-//                    borrowBookCombo.setValue(null);
-//                    borrowLibCombo.getSelectionModel().clearSelection();
-//                    borrowLibCombo.setValue(null);
-//                    layout.requestFocus();
-//                }
-//                refreshBorrowTable(table);
-//            } catch (Exception ex) {
-//                showAlert("Error", "Transaction failed: " + ex.getMessage(), Alert.AlertType.ERROR);
-//            }
-//        });
-//
-//        // --- الأكشن لزرار الإرجاع ---
-//        returnBtn.setOnAction(e -> {
-//            String idText = borrowIdField.getText().trim();
-//            if (idText.isEmpty()) {
-//                showAlert("Input Error", "ID is required for return.", Alert.AlertType.WARNING);
-//                return;
-//            }
-//            try {
-//                String res = borrowService.returnBook(Integer.parseInt(idText));
-//                showAlert("Return Status", res, Alert.AlertType.INFORMATION);
-//                borrowIdField.clear();
-//                refreshBorrowTable(table);
-//            } catch (Exception ex) {
-//                showAlert("Error", "Could not process return.", Alert.AlertType.ERROR);
-//            }
-//        });
-//
-//        layout.getChildren().addAll(topSection, tableCard);
-//        return layout;
-//    }
-
     private VBox createBorrowView() {
         VBox layout = new VBox(25);
         layout.setPadding(new Insets(20));
@@ -653,7 +491,6 @@ public class LibraryApp extends Application {
         issueBtn.setMaxWidth(Double.MAX_VALUE);
         issueCard.getChildren().addAll(borrowStudentCombo, borrowBookCombo, borrowLibCombo, issueBtn);
 
-        // --- كارت إرجاع كتاب ---
         VBox returnCard = createCard("📤 Return Book System");
         returnCard.setSpacing(20);
         HBox.setHgrow(returnCard, Priority.ALWAYS);
@@ -666,7 +503,7 @@ public class LibraryApp extends Application {
 
         topSection.getChildren().addAll(issueCard, returnCard);
 
-        // --- كارت سجل العمليات (الجدول والسيرش العام) ---
+
         VBox tableCard = createCard("Library Transaction Logs");
         TextField searchField = new TextField();
         searchField.setPromptText("🔍 Search History (Student, Book, or Librarian)...");
@@ -674,7 +511,7 @@ public class LibraryApp extends Application {
         searchField.setStyle("-fx-background-radius: 20; -fx-padding: 0 15;");
         HBox.setHgrow(searchField, Priority.ALWAYS);
 
-        Button overdueBtn = new Button("⚠️ Overdue");
+        Button overdueBtn = new Button("Overdue");
         Button activeBtn = new Button("🔄 Active");
         Button viewAllBtn = new Button("All");
         HBox filterHeader = new HBox(15, searchField, overdueBtn, activeBtn, viewAllBtn);
@@ -695,7 +532,7 @@ public class LibraryApp extends Application {
         VBox.setVgrow(table, Priority.ALWAYS);
         tableCard.getChildren().addAll(filterHeader, table);
 
-        // --- أكشن زرار الاستعارة ---
+
         issueBtn.setOnAction(e -> {
             if (borrowStudentCombo.getValue() == null || borrowBookCombo.getValue() == null || borrowLibCombo.getValue() == null) {
                 showAlert("Input Missing", "Please select valid entries from the lists!", Alert.AlertType.WARNING);
@@ -734,15 +571,13 @@ public class LibraryApp extends Application {
     private <T> void setupSearchableComboBox(ComboBox<T> comboBox, List<T> items, String type, String placeholder) {
         if (items == null) return;
 
-        // 1. فك ارتباط البيانات بـ Hibernate تماماً
+
         ObservableList<T> originalList = FXCollections.observableArrayList(new ArrayList<>(items));
 
-        // 2. إعداد القائمة كقائمة اختيار عادية (غير قابلة للكتابة لضمان الاستقرار)
         comboBox.setItems(originalList);
         comboBox.setEditable(false);
         comboBox.setPromptText(placeholder);
 
-        // 3. إعداد شكل عرض العناصر (الاسم الأول + الأخير)
         comboBox.setCellFactory(lv -> new ListCell<T>() {
             @Override
             protected void updateItem(T item, boolean empty) {
@@ -755,13 +590,12 @@ public class LibraryApp extends Application {
             }
         });
 
-        // 4. إعداد شكل العنصر المختار
         comboBox.setButtonCell(new ListCell<T>() {
             @Override
             protected void updateItem(T item, boolean empty) {
                 super.updateItem(item, empty);
                 if (empty || item == null) {
-                    setText(placeholder); // يعرض الـ Placeholder لو مفيش اختيار
+                    setText(placeholder);
                 } else {
                     setText(getDisplayName(item, type));
                 }
@@ -824,7 +658,7 @@ public class LibraryApp extends Application {
             return new SimpleStringProperty("✅ Returned");
         });
 
-        // --- الجزء المسؤول عن الألوان (الذي سيعيد اللون الأخضر) ---
+
         statusCol.setCellFactory(column -> new TableCell<Borrow, String>() {
             @Override
             protected void updateItem(String item, boolean empty) {
@@ -834,15 +668,14 @@ public class LibraryApp extends Application {
                     setStyle("");
                 } else {
                     setText(item);
-                    // تلوين الحالة بناءً على النص
                     if (item.contains("Returned")) {
-                        setTextFill(Color.web("#10B981")); // لون أخضر مريح (Emerald Green)
+                        setTextFill(Color.web("#10B981"));
                         setStyle("-fx-font-weight: bold;");
                     } else if (item.contains("OVERDUE")) {
-                        setTextFill(Color.web("#EF4444")); // لون أحمر صريح
+                        setTextFill(Color.web("#EF4444"));
                         setStyle("-fx-font-weight: bold;");
                     } else if (item.contains("Borrowed")) {
-                        setTextFill(Color.web("#3B82F6")); // لون أزرق للعمليات النشطة
+                        setTextFill(Color.web("#3B82F6"));
                         setStyle("-fx-font-weight: bold;");
                     } else {
                         setTextFill(Color.BLACK);
@@ -855,22 +688,19 @@ public class LibraryApp extends Application {
         t.getColumns().setAll(idCol, studentCol, bookCol, statusCol);
         t.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
     }
-//    private void refreshBorrowTable(TableView<Borrow> t) {
-//        if(borrowService != null)
-//            t.getItems().setAll(borrowService.getAllBorrows());
-//    }
+
     private void refreshBorrowTable(TableView<Borrow> table) {
         try {
             List<Borrow> allBorrows = borrowService.getAllBorrows();
             if (allBorrows == null) allBorrows = new ArrayList<>();
-            // نستخدم ArrayList عشان نفصل البيانات عن الـ Session بتاعة Hibernate
+
             table.getItems().setAll(new ArrayList<>(allBorrows));
         } catch (Exception e) {
             System.err.println("Error refreshing table: " + e.getMessage());
         }
     }
 
-    // ==================== DEPARTMENT & LIBRARIAN ====================
+
     private VBox createDepartmentView() {
         VBox layout = new VBox(25);
 
@@ -906,6 +736,29 @@ public class LibraryApp extends Application {
 
         table.getColumns().setAll(idCol, nameCol);
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        table.setRowFactory(tv -> {
+            TableRow<Department> row = new TableRow<>();
+            ContextMenu menu = new ContextMenu();
+
+            MenuItem update = new MenuItem("Update Name");
+            update.setOnAction(e -> showUpdateDepartmentDialog(row.getItem(), table));
+
+            MenuItem delete = new MenuItem("Delete Department");
+            delete.setStyle("-fx-text-fill: red;");
+            delete.setOnAction(e -> {
+                try {
+                    departmentService.deleteDepartment(row.getItem().getDeptId());
+                    refreshDepartmentTable(table);
+                } catch (Exception ex) {
+                    showAlert("Cannot Delete", "This department might be assigned to active students.", Alert.AlertType.ERROR);
+                }
+            });
+
+            menu.getItems().addAll(update, delete);
+            row.contextMenuProperty().bind(Bindings.when(row.emptyProperty()).then((ContextMenu)null).otherwise(menu));
+            return row;
+        });
 
         refreshDepartmentTable(table);
 
@@ -943,6 +796,24 @@ public class LibraryApp extends Application {
         layout.getChildren().addAll(formCard, tableCard);
         return layout;
     }
+
+    private void showUpdateDepartmentDialog(Department d, TableView<Department> t) {
+        TextInputDialog dia = new TextInputDialog(d.getDeptName());
+        dia.setTitle("Update Department");
+        dia.setHeaderText("Enter new name for department:");
+        dia.showAndWait().ifPresent(val -> {
+            try {
+                if(!val.trim().isEmpty()) {
+                    d.setDeptName(val.trim());
+                    departmentService.updateDepartment(d.getDeptId(), d);
+                    refreshDepartmentTable(t);
+                }
+            } catch (Exception ex) {
+                showAlert("Error", "Could not update department.", Alert.AlertType.ERROR);
+            }
+        });
+    }
+
     private void refreshDepartmentTable(TableView<Department> t) { if(departmentService!=null) t.getItems().setAll(departmentService.getAllDepartments()); }
 
     private VBox createLibrarianView() {
@@ -996,6 +867,29 @@ public class LibraryApp extends Application {
         table.getColumns().setAll(idCol, nameCol, shiftCol);
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
+        table.setRowFactory(tv -> {
+            TableRow<Librarian> row = new TableRow<>();
+            ContextMenu menu = new ContextMenu();
+
+            MenuItem update = new MenuItem("Update Details");
+            update.setOnAction(e -> showUpdateLibrarianDialog(row.getItem(), table));
+
+            MenuItem delete = new MenuItem("Delete Librarian");
+            delete.setStyle("-fx-text-fill: red;");
+            delete.setOnAction(e -> {
+                try {
+                    librarianService.deleteLibrarian(row.getItem().getLibrarianId());
+                    refreshLibrarianTable(table);
+                } catch (Exception ex) {
+                    showAlert("Cannot Delete", "This librarian is linked to existing borrow records.", Alert.AlertType.ERROR);
+                }
+            });
+
+            menu.getItems().addAll(update, delete);
+            row.contextMenuProperty().bind(Bindings.when(row.emptyProperty()).then((ContextMenu)null).otherwise(menu));
+            return row;
+        });
+
         filterCombo.setOnAction(e -> {
             if ("ALL".equals(filterCombo.getValue())) {
                 refreshLibrarianTable(table);
@@ -1040,7 +934,43 @@ public class LibraryApp extends Application {
         return layout;
     }
 
+
+    private void showUpdateLibrarianDialog(Librarian l, TableView<Librarian> t) {
+        Dialog<ButtonType> d = new Dialog<>();
+        d.setTitle("Update Librarian");
+        ButtonType upBtn = new ButtonType("Save Changes", ButtonBar.ButtonData.OK_DONE);
+        d.getDialogPane().getButtonTypes().addAll(upBtn, ButtonType.CANCEL);
+
+        GridPane g = new GridPane();
+        g.setHgap(10); g.setVgap(10); g.setPadding(new Insets(20));
+
+        TextField fn = new TextField(l.getFirstname());
+        TextField ln = new TextField(l.getLastname());
+        ComboBox<String> shiftCombo = new ComboBox<>(FXCollections.observableArrayList("MORNING", "EVENING", "NIGHT"));
+        shiftCombo.setValue(l.getShift());
+
+        g.addRow(0, new Label("First Name:"), fn);
+        g.addRow(1, new Label("Last Name:"), ln);
+        g.addRow(2, new Label("Shift:"), shiftCombo);
+
+        d.getDialogPane().setContent(g);
+        d.showAndWait().ifPresent(r -> {
+            if (r == upBtn) {
+                try {
+                    l.setFirstname(fn.getText().trim());
+                    l.setLastname(ln.getText().trim());
+                    l.setShift(shiftCombo.getValue());
+                    librarianService.updateLibrarian(l.getLibrarianId(), l);
+                    refreshLibrarianTable(t);
+                } catch (Exception ex) {
+                    showAlert("Error", "Could not update librarian.", Alert.AlertType.ERROR);
+                }
+            }
+        });
+    }
+
     private void refreshLibrarianTable(TableView<Librarian> t) { if(librarianService!=null) t.getItems().setAll(librarianService.getAllLibrarians()); }
+
 
     private void showAlert(String t, String c, Alert.AlertType type) {
         Alert a = new Alert(type); a.setTitle(t); a.setHeaderText(null); a.setContentText(c); a.showAndWait();

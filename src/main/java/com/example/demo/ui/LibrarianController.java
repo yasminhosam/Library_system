@@ -33,13 +33,13 @@ public class LibrarianController {
         return ResponseEntity.ok(librarianService.getLibrarianById(id));
     }
 
-    // UPDATE
+
     @PutMapping("/{id}")
     public ResponseEntity<Librarian> updateLibrarian(@PathVariable int id, @RequestBody Librarian librarian) {
         return ResponseEntity.ok(librarianService.updateLibrarian(id, librarian));
     }
 
-    // DELETE
+
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteLibrarian(@PathVariable int id) {
         return ResponseEntity.ok(librarianService.deleteLibrarian(id));

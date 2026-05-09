@@ -15,25 +15,25 @@ public class DepartmentController {
     @Autowired
     private DepartmentService departmentService;
 
-    // INSERT
+
     @PostMapping
     public ResponseEntity<Department> addDepartment(@RequestBody Department department) {
         return ResponseEntity.ok(departmentService.addDepartment(department));
     }
 
-    // READ ALL
+
     @GetMapping
     public ResponseEntity<List<Department>> getAllDepartments() {
         return ResponseEntity.ok(departmentService.getAllDepartments());
     }
 
-    // UPDATE
+
     @PutMapping("/{id}")
     public ResponseEntity<Department> updateDepartment(@PathVariable int id, @RequestBody Department department) {
         return ResponseEntity.ok(departmentService.updateDepartment(id, department));
     }
 
-    // DELETE
+
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteDepartment(@PathVariable int id) {
         return ResponseEntity.ok(departmentService.deleteDepartment(id));

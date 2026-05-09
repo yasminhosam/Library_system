@@ -15,7 +15,7 @@ public class BorrowController {
     @Autowired
     private BorrowService borrowService;
 
-    // Borrow a Book
+
     @PostMapping("/borrow")
     public ResponseEntity<String> borrowBook(
             @RequestParam int studentId,
@@ -24,13 +24,13 @@ public class BorrowController {
         return ResponseEntity.ok(borrowService.borrowBook(studentId, bookId, librarianId));
     }
 
-    // Return a Book
+
     @PutMapping("/return/{borrowId}")
     public ResponseEntity<String> returnBook(@PathVariable int borrowId) {
         return ResponseEntity.ok(borrowService.returnBook(borrowId));
     }
 
-    // READ ALL
+
     @GetMapping
     public ResponseEntity<List<Borrow>> getAllBorrows() {
         return ResponseEntity.ok(borrowService.getAllBorrows());

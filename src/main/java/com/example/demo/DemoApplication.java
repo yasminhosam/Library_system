@@ -16,16 +16,5 @@ public class DemoApplication {
     public static void main(String[] args) {
         SpringApplication.run(DemoApplication.class, args);
     }
-//
-//	@Override
-//	public void run(String... args) {
-//
-//		Student s = new Student();
-//		s.setFirstname("Mona");
-//		s.setLastname("Ali");
-//		s.setEmail("mona@gmail.com");
-//		s.setMaxBorrowLimit(3);
-//
-//		studentService.addStudent(s);
-//	}
+
 }
