@@ -45,4 +45,8 @@ public class LibrarianService {
         librarianRepository.deleteById(id);
         return "Deleted Successfully";
     }
+
+    public List<Librarian> getLibrariansByShift(String shift) {
+        return librarianRepository.findByShift(shift);
+    }
 }

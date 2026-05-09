@@ -59,6 +59,14 @@ public class BorrowService {
     }
 
 
+    public List<Borrow> getBorrowsByStatus(String status) {
+        return borrowRepository.findByStatus(status);
+    }
+
+    public List<Borrow> getOverdueLoans() {
+        return borrowRepository.findByStatusAndDueDateBefore("BORROWED", new java.util.Date());
+    }
+
     @Transactional
     public String returnBook(int borrowId) {
 

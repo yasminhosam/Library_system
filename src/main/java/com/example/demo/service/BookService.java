@@ -50,4 +50,8 @@ public class BookService {
         bookRepository.deleteById(id);
         return "Deleted Successfully";
     }
+
+    public List<Book> getAvailableBooksOnly() {
+        return bookRepository.findByAvailableCopiesGreaterThan(0);
+    }
 }

@@ -54,4 +54,8 @@ public class StudentService {
         studentRepository.deleteById(id);
         return "Deleted Successfully.";
     }
+
+    public List<Student> getVipStudents(int limit) {
+        return studentRepository.findByMaxBorrowLimitGreaterThan(limit);
+    }
 }
