@@ -1,6 +1,7 @@
 package com.example.demo.entity;
 
 import jakarta.persistence.*;
+import java.util.List;
 
 @Entity
 @Table(name = "department")
@@ -14,6 +15,16 @@ public class Department {
     @Column(name = "dept_name")
     private String deptName;
 
+    @OneToMany(mappedBy = "department", cascade = CascadeType.ALL)
+    private List<Student> students;
+
+    public List<Student> getStudents() {
+        return students;
+    }
+
+    public void setStudents(List<Student> students) {
+        this.students = students;
+    }
     public int getDeptId() {
         return deptId;
     }

@@ -330,18 +330,58 @@ public class LibraryApp extends Application {
             return row;
         });
     }
-
     private void showUpdateStudentDialog(Student s, TableView<Student> t) {
-        Dialog<ButtonType> d = new Dialog<>(); d.setTitle("Update Student");
+        Dialog<ButtonType> d = new Dialog<>();
+        d.setTitle("Student Profile & Borrowing History");
         ButtonType upBtn = new ButtonType("Save Changes", ButtonBar.ButtonData.OK_DONE);
         d.getDialogPane().getButtonTypes().addAll(upBtn, ButtonType.CANCEL);
-        GridPane g = new GridPane(); g.setHgap(10); g.setVgap(10); g.setPadding(new Insets(20));
-        TextField fn = new TextField(s.getFirstname()); TextField ln = new TextField(s.getLastname());
-        g.addRow(0, new Label("First:"), fn); g.addRow(1, new Label("Last:"), ln);
-        d.getDialogPane().setContent(g);
+
+        VBox mainLayout = new VBox(20);
+        mainLayout.setPadding(new Insets(20));
+        mainLayout.setPrefWidth(500);
+
+        GridPane editGrid = new GridPane();
+        editGrid.setHgap(10); editGrid.setVgap(10);
+        TextField fn = new TextField(s.getFirstname());
+        TextField ln = new TextField(s.getLastname());
+        TextField em = new TextField(s.getEmail());
+        editGrid.addRow(0, new Label("First Name:"), fn);
+        editGrid.addRow(1, new Label("Last Name:"), ln);
+        editGrid.addRow(2, new Label("Email:"), em);
+
+        Label historyTitle = new Label("📚 Borrowing History:");
+        historyTitle.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #1E293B;");
+
+        TableView<Borrow> historyTable = new TableView<>();
+
+        TableColumn<Borrow, String> bookCol = new TableColumn<>("Book");
+        bookCol.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getBook() != null ? cd.getValue().getBook().getTitle() : "N/A"));
+
+        TableColumn<Borrow, String> dateCol = new TableColumn<>("Date");
+        dateCol.setCellValueFactory(cd -> new SimpleStringProperty(new SimpleDateFormat("yyyy-MM-dd").format(cd.getValue().getBorrowDate())));
+
+        TableColumn<Borrow, String> statusCol = new TableColumn<>("Status");
+        statusCol.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getStatus()));
+
+        historyTable.getColumns().addAll(bookCol, dateCol, statusCol);
+
+        if (s.getBorrowHistory() != null) {
+            historyTable.getItems().setAll(s.getBorrowHistory());
+        }
+        historyTable.setPrefHeight(200);
+        historyTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        mainLayout.getChildren().addAll(new Label("Update Basic Info:"), editGrid, new Separator(), historyTitle, historyTable);
+        d.getDialogPane().setContent(mainLayout);
+
         d.showAndWait().ifPresent(r -> {
-            if (r == upBtn) { s.setFirstname(fn.getText()); s.setLastname(ln.getText());
-                studentService.updateStudent(s.getStudentId(), s); refreshStudentTable(t); }
+            if (r == upBtn) {
+                s.setFirstname(fn.getText());
+                s.setLastname(ln.getText());
+                s.setEmail(em.getText());
+                studentService.updateStudent(s.getStudentId(), s);
+                refreshStudentTable(t);
+            }
         });
     }
 
@@ -452,13 +492,64 @@ public class LibraryApp extends Application {
     }
 
     private void showUpdateBookDialog(Book b, TableView<Book> t) {
-        TextInputDialog dia = new TextInputDialog(String.valueOf(b.getTotalCopies()));
-        dia.setTitle("Inventory Update"); dia.setHeaderText("Set total copies for: " + b.getTitle());
-        dia.showAndWait().ifPresent(val -> {
-            try { int nt = Integer.parseInt(val); int d = nt - b.getTotalCopies();
-                b.setTotalCopies(nt); b.setAvailableCopies(b.getAvailableCopies() + d);
-                bookService.updateBook(b.getBookId(), b); refreshBookTable(t);
-            } catch (Exception ex) { showAlert("Error", "Enter a valid number", Alert.AlertType.ERROR); }
+        Dialog<ButtonType> d = new Dialog<>();
+        d.setTitle("Book Details & Circulation History");
+        ButtonType upBtn = new ButtonType("Save Copies", ButtonBar.ButtonData.OK_DONE);
+        d.getDialogPane().getButtonTypes().addAll(upBtn, ButtonType.CANCEL);
+
+        VBox mainLayout = new VBox(20);
+        mainLayout.setPadding(new Insets(20));
+        mainLayout.setPrefWidth(550);
+
+        GridPane editGrid = new GridPane();
+        editGrid.setHgap(10); editGrid.setVgap(10);
+        editGrid.addRow(0, new Label("Title:"), new Label(b.getTitle()));
+        editGrid.addRow(1, new Label("Author:"), new Label(b.getAuthor()));
+
+        TextField copiesField = new TextField(String.valueOf(b.getTotalCopies()));
+        editGrid.addRow(2, new Label("Update Total Copies:"), copiesField);
+
+        Label historyTitle = new Label("📖 Book Circulation History:");
+        historyTitle.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #1E293B;");
+
+        TableView<Borrow> historyTable = new TableView<>();
+
+        TableColumn<Borrow, String> studentCol = new TableColumn<>("Student Name");
+        studentCol.setCellValueFactory(cd -> {
+            Student s = cd.getValue().getStudent();
+            return new SimpleStringProperty(s != null ? s.getFirstname() + " " + s.getLastname() : "N/A");
+        });
+
+        TableColumn<Borrow, String> dateCol = new TableColumn<>("Borrow Date");
+        dateCol.setCellValueFactory(cd -> new SimpleStringProperty(new SimpleDateFormat("yyyy-MM-dd").format(cd.getValue().getBorrowDate())));
+
+        TableColumn<Borrow, String> statusCol = new TableColumn<>("Status");
+        statusCol.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getStatus()));
+
+        historyTable.getColumns().addAll(studentCol, dateCol, statusCol);
+
+        if (b.getBorrowRecords() != null) {
+            historyTable.getItems().setAll(b.getBorrowRecords());
+        }
+        historyTable.setPrefHeight(200);
+        historyTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        mainLayout.getChildren().addAll(new Label("Book Information:"), editGrid, new Separator(), historyTitle, historyTable);
+        d.getDialogPane().setContent(mainLayout);
+
+        d.showAndWait().ifPresent(r -> {
+            if (r == upBtn) {
+                try {
+                    int newTotal = Integer.parseInt(copiesField.getText());
+                    int diff = newTotal - b.getTotalCopies();
+                    b.setTotalCopies(newTotal);
+                    b.setAvailableCopies(b.getAvailableCopies() + diff);
+                    bookService.updateBook(b.getBookId(), b);
+                    refreshBookTable(t);
+                } catch (Exception ex) {
+                    showAlert("Error", "Enter a valid number for copies", Alert.AlertType.ERROR);
+                }
+            }
         });
     }
 

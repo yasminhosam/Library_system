@@ -1,6 +1,7 @@
 package com.example.demo.entity;
 
 import jakarta.persistence.*;
+import java.util.List;
 
 @Entity
 @Table(name = "student")
@@ -22,6 +23,16 @@ public class Student {
     @JoinColumn(name = "dept_id")
     private Department department;
 
+    @OneToMany(mappedBy = "student", fetch = FetchType.EAGER)
+    private List<Borrow> borrowHistory;
+
+    public List<Borrow> getBorrowHistory() {
+        return borrowHistory;
+    }
+
+    public void setBorrowHistory(List<Borrow> borrowHistory) {
+        this.borrowHistory = borrowHistory;
+    }
     public int getStudentId() {
         return studentId;
     }
